@@ -3,5 +3,5 @@ The Plasma CPU project has been placed into the public domain by its original au
 This software is provided "as is" and any express or implied warranties, including, but not limited to, the implied warranties of merchantability and fitness for a particular purpose are disclaimed.
 
 WARNING :
-Files under gpl/ directory are copyighted.
+Files under gpl/ directory are copyrighted.
 
