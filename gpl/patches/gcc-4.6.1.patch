@@ -1,0 +1,195 @@
+diff -uNr gcc-4.6.1.old/gcc/config/mips/mips.c gcc-4.6.1/gcc/config/mips/mips.c
+--- gcc-4.6.1.old/gcc/config/mips/mips.c	2011-05-29 19:48:14.000000000 +0200
++++ gcc-4.6.1/gcc/config/mips/mips.c	2023-04-05 15:04:37.838010537 +0200
+@@ -6606,7 +6606,9 @@
+      For instance, lh/lh/sh/sh is usually better than lwl/lwr/swl/swr
+      and lw/lw/sw/sw is usually better than ldl/ldr/sdl/sdr.
+      Otherwise move word-sized chunks.  */
+-  if (MEM_ALIGN (src) == BITS_PER_WORD / 2
++  if (TARGET_PATFREE)
++	  bits = MIN (MEM_ALIGN (src), MEM_ALIGN (dest));
++  else if (MEM_ALIGN (src) == BITS_PER_WORD / 2
+       && MEM_ALIGN (dest) == BITS_PER_WORD / 2)
+     bits = BITS_PER_WORD / 2;
+   else
+diff -uNr gcc-4.6.1.old/gcc/config/mips/mips.md gcc-4.6.1/gcc/config/mips/mips.md
+--- gcc-4.6.1.old/gcc/config/mips/mips.md	2011-03-03 22:56:58.000000000 +0100
++++ gcc-4.6.1/gcc/config/mips/mips.md	2023-04-05 15:07:09.507986868 +0200
+@@ -1238,7 +1238,7 @@
+   [(set (match_operand:SCALARF 0 "register_operand")
+ 	(mult:SCALARF (match_operand:SCALARF 1 "register_operand")
+ 		      (match_operand:SCALARF 2 "register_operand")))]
+-  ""
++  "!TARGET_NO_HW_MULT"
+   "")
+ 
+ (define_insn "*mul<mode>3"
+@@ -1323,7 +1323,7 @@
+   [(set (match_operand:GPR 0 "register_operand")
+ 	(mult:GPR (match_operand:GPR 1 "register_operand")
+ 		  (match_operand:GPR 2 "register_operand")))]
+-  ""
++  "!TARGET_NO_HW_MULT"
+ {
+   if (TARGET_LOONGSON_2EF || TARGET_LOONGSON_3A)
+     emit_insn (gen_mul<mode>3_mul3_loongson (operands[0], operands[1],
+@@ -1342,7 +1342,7 @@
+   [(set (match_operand:GPR 0 "register_operand" "=d")
+         (mult:GPR (match_operand:GPR 1 "register_operand" "d")
+                   (match_operand:GPR 2 "register_operand" "d")))]
+-  "TARGET_LOONGSON_2EF || TARGET_LOONGSON_3A"
++  "(TARGET_LOONGSON_2EF || TARGET_LOONGSON_3A)"
+ {
+   if (TARGET_LOONGSON_2EF)
+     return "<d>multu.g\t%0,%1,%2";
+@@ -1395,7 +1395,7 @@
+   [(set (match_operand:GPR 0 "register_operand" "=l")
+ 	(mult:GPR (match_operand:GPR 1 "register_operand" "d")
+ 		  (match_operand:GPR 2 "register_operand" "d")))]
+-  "!TARGET_FIX_R4000"
++  "!TARGET_FIX_R4000 && !TARGET_NO_HW_MULT"
+   "<d>mult\t%1,%2"
+   [(set_attr "type" "imul")
+    (set_attr "mode" "<MODE>")])
+@@ -1731,7 +1731,7 @@
+   [(set (match_operand:DI 0 "register_operand")
+ 	(mult:DI (any_extend:DI (match_operand:SI 1 "register_operand"))
+ 		 (any_extend:DI (match_operand:SI 2 "register_operand"))))]
+-  "mips_mulsidi3_gen_fn (<CODE>) != NULL"
++  "mips_mulsidi3_gen_fn (<CODE>) != NULL && !TARGET_NO_HW_MULT"
+ {
+   mulsidi3_gen_fn fn = mips_mulsidi3_gen_fn (<CODE>);
+   emit_insn (fn (operands[0], operands[1], operands[2]));
+@@ -1745,7 +1745,7 @@
+   [(set (match_operand:DI 0 "register_operand" "=ka")
+ 	(mult:DI (any_extend:DI (match_operand:SI 1 "register_operand" "d"))
+ 		 (any_extend:DI (match_operand:SI 2 "register_operand" "d"))))]
+-  "!TARGET_64BIT && (!TARGET_FIX_R4000 || ISA_HAS_DSP)"
++  "!TARGET_64BIT && (!TARGET_FIX_R4000 || ISA_HAS_DSP) && !TARGET_NO_HW_MULT"
+ {
+   if (ISA_HAS_DSP_MULT)
+     return "mult<u>\t%q0,%1,%2";
+@@ -1906,7 +1906,7 @@
+ 	  (mult:DI (any_extend:DI (match_operand:SI 1 "register_operand"))
+ 		   (any_extend:DI (match_operand:SI 2 "register_operand")))
+ 	  (const_int 32))))]
+-  ""
++  "!TARGET_NO_HW_MULT"
+ {
+   if (ISA_HAS_MULHI)
+     emit_insn (gen_<su>mulsi3_highpart_mulhi_internal (operands[0],
+@@ -1926,9 +1926,9 @@
+ 		   (any_extend:DI (match_operand:SI 2 "register_operand" "d")))
+ 	  (const_int 32))))
+    (clobber (match_scratch:SI 3 "=l"))]
+-  "!ISA_HAS_MULHI"
++  "!ISA_HAS_MULHI && !TARGET_NO_HW_MULT"
+   { return TARGET_FIX_R4000 ? "mult<u>\t%1,%2\n\tmfhi\t%0" : "#"; }
+-  "&& reload_completed && !TARGET_FIX_R4000"
++  "&& reload_completed && !TARGET_FIX_R4000 && !TARGET_NO_HW_MULT"
+   [(const_int 0)]
+ {
+   rtx hilo;
+@@ -2312,7 +2312,7 @@
+    (set (match_operand:GPR 3 "register_operand" "=d")
+ 	(mod:GPR (match_dup 1)
+ 		 (match_dup 2)))]
+-  "!TARGET_FIX_VR4120"
++  "!TARGET_FIX_VR4120 && !TARGET_NO_HW_DIV"
+   "#"
+   "&& reload_completed"
+   [(const_int 0)]
+@@ -2344,7 +2344,7 @@
+    (set (match_operand:GPR 3 "register_operand" "=d")
+ 	(umod:GPR (match_dup 1)
+ 		  (match_dup 2)))]
+-  ""
++  "!TARGET_NO_HW_DIV"
+   "#"
+   "reload_completed"
+   [(const_int 0)]
+@@ -3500,7 +3500,7 @@
+ 	(sign_extract (match_operand 1 "nonimmediate_operand")
+ 		      (match_operand 2 "const_int_operand")
+ 		      (match_operand 3 "const_int_operand")))]
+-  "!TARGET_MIPS16"
++  "!TARGET_MIPS16 && !TARGET_PATFREE"
+ {
+   if (mips_expand_ext_as_unaligned_load (operands[0], operands[1],
+ 					 INTVAL (operands[2]),
+@@ -3537,7 +3537,7 @@
+ 	(zero_extract (match_operand 1 "nonimmediate_operand")
+ 		      (match_operand 2 "const_int_operand")
+ 		      (match_operand 3 "const_int_operand")))]
+-  "!TARGET_MIPS16"
++  "!TARGET_MIPS16 && !TARGET_PATFREE"
+ {
+   if (mips_expand_ext_as_unaligned_load (operands[0], operands[1],
+ 					 INTVAL (operands[2]),
+@@ -3586,7 +3586,7 @@
+ 		      (match_operand 1 "immediate_operand")
+ 		      (match_operand 2 "immediate_operand"))
+ 	(match_operand 3 "reg_or_0_operand"))]
+-  "!TARGET_MIPS16"
++  "!TARGET_MIPS16 && !TARGET_PATFREE"
+ {
+   if (mips_expand_ins_as_unaligned_store (operands[0], operands[3],
+ 					  INTVAL (operands[1]),
+@@ -3657,7 +3657,7 @@
+ 	(unspec:GPR [(match_operand:BLK 1 "memory_operand" "m")
+ 		     (match_operand:QI 2 "memory_operand" "m")]
+ 		    UNSPEC_LOAD_LEFT))]
+-  "!TARGET_MIPS16 && mips_mem_fits_mode_p (<MODE>mode, operands[1])"
++  "!TARGET_MIPS16 && !TARGET_PATFREE && mips_mem_fits_mode_p (<MODE>mode, operands[1])"
+   "<load>l\t%0,%2"
+   [(set_attr "move_type" "load")
+    (set_attr "mode" "<MODE>")])
+@@ -3668,7 +3668,7 @@
+ 		     (match_operand:QI 2 "memory_operand" "m")
+ 		     (match_operand:GPR 3 "register_operand" "0")]
+ 		    UNSPEC_LOAD_RIGHT))]
+-  "!TARGET_MIPS16 && mips_mem_fits_mode_p (<MODE>mode, operands[1])"
++  "!TARGET_MIPS16 && !TARGET_PATFREE && mips_mem_fits_mode_p (<MODE>mode, operands[1])"
+   "<load>r\t%0,%2"
+   [(set_attr "move_type" "load")
+    (set_attr "mode" "<MODE>")])
+@@ -3678,7 +3678,7 @@
+ 	(unspec:BLK [(match_operand:GPR 1 "reg_or_0_operand" "dJ")
+ 		     (match_operand:QI 2 "memory_operand" "m")]
+ 		    UNSPEC_STORE_LEFT))]
+-  "!TARGET_MIPS16 && mips_mem_fits_mode_p (<MODE>mode, operands[0])"
++  "!TARGET_MIPS16 && !TARGET_PATFREE && mips_mem_fits_mode_p (<MODE>mode, operands[0])"
+   "<store>l\t%z1,%2"
+   [(set_attr "move_type" "store")
+    (set_attr "mode" "<MODE>")])
+@@ -3689,7 +3689,7 @@
+ 		     (match_operand:QI 2 "memory_operand" "m")
+ 		     (match_dup 0)]
+ 		    UNSPEC_STORE_RIGHT))]
+-  "!TARGET_MIPS16 && mips_mem_fits_mode_p (<MODE>mode, operands[0])"
++  "!TARGET_MIPS16 && !TARGET_PATFREE && mips_mem_fits_mode_p (<MODE>mode, operands[0])"
+   "<store>r\t%z1,%2"
+   [(set_attr "move_type" "store")
+    (set_attr "mode" "<MODE>")])
+diff -uNr gcc-4.6.1.old/gcc/config/mips/mips.opt gcc-4.6.1/gcc/config/mips/mips.opt
+--- gcc-4.6.1.old/gcc/config/mips/mips.opt	2011-02-17 02:59:04.000000000 +0100
++++ gcc-4.6.1/gcc/config/mips/mips.opt	2023-04-05 15:08:44.679418197 +0200
+@@ -270,6 +270,18 @@
+ Target Report RejectNegative Mask(SINGLE_FLOAT)
+ Restrict the use of hardware floating-point instructions to 32-bit operations
+ 
++mpatfree
++Target Report Mask(PATFREE)
++Do not use patented lwl/lwr/swl/swr instructions
++
++mnohwdiv
++Target Report Mask(NO_HW_DIV)
++No hardware divu/div instruction support
++
++mnohwmult
++Target Report Mask(NO_HW_MULT)
++No hardware multiplier instruction support
++
+ msmartmips
+ Target Report Mask(SMARTMIPS)
+ Use SmartMIPS instructions
