@@ -18,7 +18,7 @@ use work.mlite_pack.all;
 --use UNISIM.vcomponents.all;   --May need to uncomment for ModelSim
 
 entity reg_bank is
-   generic(memory_type : string := "XILINX_16X");
+   generic(memory_type : string := "TRI_PORT_X");
    port(clk            : in  std_logic;
         reset_in       : in  std_logic;
         pause          : in  std_logic;

@@ -1,119 +1,55 @@
-#Makefile for Plasma
 
-#for ModelSim
-#WORK_DIR = work
-#DEP_FILE = _primary.dat
-#COMPILE = vcom -check_synthesis
+PATH:=$(PATH):../../../oss_cad-suite/bin
+GHDL_PREFIX=c:/lib/ghdl/
+TOP=mlite_cpu
+RM=rm -f 
+VHDL_SRC = \
+	mlite_pack.vhd \
+	alu.vhd \
+	bus_mux.vhd \
+	control.vhd \
+	ddr_ctrl.vhd \
+	mem_ctrl.vhd \
+	mlite_cpu.vhd \
+	mult.vhd \
+	pc_next.vhd \
+	pipeline.vhd \
+	plasma.vhd \
+	plasma_if.vhd \
+	ram.vhd \
+	reg_bank.vhd \
+	shifter.vhd \
+	uart.vhd 
 
-#for FREE VHDL simulator http://www.symphonyeda.com 
-#WARNING: vhdle now deletes the output.txt if terminated by a ^C
-WORK_DIR = work.sym
-DEP_FILE = prim.dep
-COMPILE = vhdlp -s
+all: synth route
 
-all: $(WORK_DIR)/tbench/$(DEP_FILE) 
 
-run: all
-	-@del output.txt
-	vhdle -t 30us tbench
-	type output.txt|more
+synth:
+	ghdl -i --PREFIX=$(GHDL_PREFIX) --ieee=synopsys -fsynopsys -fexplicit --work=$(TOP) -Pbuild $(VHDL_SRC)
+	ghdl -m --PREFIX=$(GHDL_PREFIX) --warn-no-binding --ieee=synopsys -fsynopsys -fexplicit --work=$(TOP) $(TOP)
+	ghdl synth --PREFIX=$(GHDL_PREFIX) --ieee=synopsys -fsynopsys -fexplicit --work=$(TOP) --out=verilog $(TOP) > $(TOP)_vhd.v
+	yosys -ql synth.log -p 'read_verilog -defer -sv $(TOP)_vhd.v; synth_gowin -top $(TOP) -family gw2a -json $(TOP)_v.json'
 
-run2: all
-	-@del output.txt
-	vhdle -t 50us tbench
-	type output.txt|more
+route:
+	nextpnr-himbaechel --json $(TOP)_v.json \
+                   --write $(TOP).json \
+                    --device "GW2AR-LV18QN88C8/I7" \
+                    --vopt family=GW2A-18C \
+                    --vopt cst=tangnano20k.cst
+	gowin_pack --device GW2A-18C $(TOP).json --output $(TOP)_bit.fs --compress
 
-run3: all
-	-@del output.txt
-	vhdle -t 100us tbench
-	type output.txt|more
+sim:
+	ghdl -a --PREFIX=$(GHDL_PREFIX) --ieee=synopsys -fsynopsys -fexplicit $(VHDL_SRC) tbench.vhd
+	ghdl -e --PREFIX=$(GHDL_PREFIX) --ieee=synopsys -fsynopsys -fexplicit tbench 
+	ghdl -r --PREFIX=$(GHDL_PREFIX) --ieee=synopsys -fsynopsys -fexplicit tbench --vcd=tb.vcd --stop-time=1us
+	gtkwave tb.vcd
 
-opcodes: all
-	make -C ..\tools opcodes
-	vhdle -t 200us tbench
-	@type output.txt|more
+clean:
+	$(RM) $(TOP)_vhd.v
+	$(RM) $(TOP).json
+	$(RM) $(TOP)_bit.fs
+	$(RM) $(TOP)_v.json
+	$(RM) $(TOP)*.cf
+	$(RM) synth.log
 
-simulate: all
-	vhdle -s -t 10us tbench -do simili.cmd -list trace.txt
-	-@..\tools\tracehex.exe
-	-@start ed trace2.txt
-
-simulate2: all
-	vhdle -s -t 4us tbench -do simili.cmd -list trace.txt
-	-@..\tools\tracehex.exe
-	-@ed trace2.txt
-
-$(WORK_DIR)/lpm_pack/$(DEP_FILE): lpm_pack.vhd
-	$(COMPILE) lpm_pack.vhd
-
-$(WORK_DIR)/lpm_model/$(DEP_FILE): lpm_model.vhd
-	$(COMPILE) -87 lpm_model.vhd
-
-$(WORK_DIR)/mlite_pack/$(DEP_FILE): mlite_pack.vhd
-	$(COMPILE) mlite_pack.vhd
-
-$(WORK_DIR)/alu/$(DEP_FILE): mlite_pack.vhd alu.vhd
-	$(COMPILE) alu.vhd
-
-$(WORK_DIR)/bus_mux/$(DEP_FILE): mlite_pack.vhd bus_mux.vhd
-	$(COMPILE) bus_mux.vhd
-
-$(WORK_DIR)/control/$(DEP_FILE): mlite_pack.vhd control.vhd
-	$(COMPILE) control.vhd
-
-$(WORK_DIR)/mem_ctrl/$(DEP_FILE): mlite_pack.vhd mem_ctrl.vhd
-	$(COMPILE) mem_ctrl.vhd
-
-$(WORK_DIR)/mult/$(DEP_FILE): mlite_pack.vhd mult.vhd
-	$(COMPILE) mult.vhd
-
-$(WORK_DIR)/pc_next/$(DEP_FILE): mlite_pack.vhd pc_next.vhd
-	$(COMPILE) pc_next.vhd
-
-$(WORK_DIR)/reg_bank/$(DEP_FILE): mlite_pack.vhd reg_bank.vhd 
-	$(COMPILE) reg_bank.vhd
-
-$(WORK_DIR)/shifter/$(DEP_FILE): mlite_pack.vhd shifter.vhd
-	$(COMPILE) shifter.vhd
-
-$(WORK_DIR)/pipeline/$(DEP_FILE): mlite_pack.vhd pipeline.vhd
-	$(COMPILE) pipeline.vhd
-
-$(WORK_DIR)/mlite_cpu/$(DEP_FILE): mlite_cpu.vhd \
-	$(WORK_DIR)/mlite_pack/$(DEP_FILE) \
-	$(WORK_DIR)/alu/$(DEP_FILE) \
-	$(WORK_DIR)/bus_mux/$(DEP_FILE) \
-	$(WORK_DIR)/control/$(DEP_FILE) \
-	$(WORK_DIR)/mem_ctrl/$(DEP_FILE) \
-	$(WORK_DIR)/mult/$(DEP_FILE) \
-	$(WORK_DIR)/pc_next/$(DEP_FILE) \
-	$(WORK_DIR)/reg_bank/$(DEP_FILE) \
-	$(WORK_DIR)/shifter/$(DEP_FILE) \
-	$(WORK_DIR)/pipeline/$(DEP_FILE)
-	$(COMPILE) mlite_cpu.vhd
-
-$(WORK_DIR)/ram/$(DEP_FILE): mlite_pack.vhd ram.vhd
-	$(COMPILE) -87 ram.vhd
-
-$(WORK_DIR)/uart/$(DEP_FILE): mlite_pack.vhd uart.vhd
-	$(COMPILE) -87 uart.vhd
-
-$(WORK_DIR)/plasma/$(DEP_FILE): mlite_pack.vhd plasma.vhd \
-	$(WORK_DIR)/mlite_cpu/$(DEP_FILE) \
-	$(WORK_DIR)/ram/$(DEP_FILE) \
-	$(WORK_DIR)/uart/$(DEP_FILE) 
-	$(COMPILE) plasma.vhd
-
-$(WORK_DIR)/plasma_if/$(DEP_FILE): mlite_pack.vhd plasma_if.vhd \
-	$(WORK_DIR)/plasma/$(DEP_FILE) 
-	$(COMPILE) plasma_if.vhd
-
-$(WORK_DIR)/tbench/$(DEP_FILE): mlite_pack.vhd tbench.vhd \
-	$(WORK_DIR)/plasma/$(DEP_FILE) \
-	$(WORK_DIR)/plasma_if/$(DEP_FILE) 
-	$(COMPILE) tbench.vhd
-
-altera: $(WORK_DIR)/lpm_pack/$(DEP_FILE) \
-	$(WORK_DIR)/lpm_model/$(DEP_FILE) 
-	echo UNUSED > UNUSED
 

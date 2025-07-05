@@ -7,6 +7,7 @@ ifeq ($(LANG),)
 CC_X86 = cl /O1 /nologo /I..\tools
 CP = copy
 RM = del
+PATH:=$(PATH):..\gccmips_elf
 DWIN32 = -DWIN32
 BIN_MIPS = ..\gccmips_elf
 TOOLS_DIR = ..\tools\\
