@@ -23,6 +23,9 @@ VHDL_SRC = \
 
 all: synth route
 
+monitor:
+	-../tools/monitor.exe /dev/ttyUSB1 
+	-../tools/monitor.exe 'COM6'
 
 synth:
 	ghdl -i --PREFIX=$(GHDL_PREFIX) --ieee=synopsys -fsynopsys -fexplicit --work=$(TOP) -Pbuild $(VHDL_SRC)
@@ -32,21 +35,25 @@ synth:
 
 route:
 	nextpnr-himbaechel --json $(TOP)_v.json \
-                   --write $(TOP).json \
-                    --device "GW2AR-LV18QN88C8/I7" \
-                    --vopt family=GW2A-18C \
-                    --vopt cst=tangnano20k.cst
-	gowin_pack --device GW2A-18C $(TOP).json --output $(TOP)_bit.fs --compress
+		--write $(TOP).json \
+		--device "GW2AR-LV18QN88C8/I7" \
+		--vopt family=GW2A-18C \
+		--vopt cst=tangnano20k.cst
+	gowin_pack --device GW2A-18C $(TOP).json --output $(TOP)_bit.fs
+
+flash:
+	openFPGALoader -b tangnano20k -f $(TOP)_bit.fs
 
 sim:
 	ghdl -a --PREFIX=$(GHDL_PREFIX) --ieee=synopsys -fsynopsys -fexplicit $(VHDL_SRC) tbench.vhd
 	ghdl -e --PREFIX=$(GHDL_PREFIX) --ieee=synopsys -fsynopsys -fexplicit tbench 
-	ghdl -r --PREFIX=$(GHDL_PREFIX) --ieee=synopsys -fsynopsys -fexplicit tbench --vcd=tb.vcd --stop-time=1us
-	gtkwave tb.vcd
+	ghdl -r --PREFIX=$(GHDL_PREFIX) --ieee=synopsys -fsynopsys -fexplicit tbench --vcd=$(TOP).vcd --stop-time=1us
+	gtkwave $(TOP).vcd
 
 clean:
 	$(RM) $(TOP)_vhd.v
 	$(RM) $(TOP).json
+	$(RM) $(TOP).vcd
 	$(RM) $(TOP)_bit.fs
 	$(RM) $(TOP)_v.json
 	$(RM) $(TOP)*.cf

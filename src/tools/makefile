@@ -48,7 +48,7 @@ endif
 CFLAGS = -O2 -Wall -c -s 
 CFLAGS += -fno-pic -mips1 -mno-abicalls
 
-all: convert_bin.exe tracehex.exe bintohex.exe ram_image.exe
+all: convert_bin.exe tracehex.exe bintohex.exe ram_image.exe monitor.exe
 	@echo make targets = count, opcodes, pi, test, run, tohex,\
 	bootldr, toimage, eterm
 	
@@ -73,6 +73,9 @@ bintohex.exe: bintohex.c
 
 ram_image.exe: ram_image.c
 	@$(CC_X86) -o ram_image.exe ram_image.c
+
+monitor.exe: monitor.c
+	@$(CC_X86) -o monitor.exe monitor.c
 
 # Terminal program that will download a new image.
 # For Linux, use any serial port program at 57600 baud 8-bits;1-stop bit
