@@ -36,7 +36,7 @@ synth:
 	ghdl -i --PREFIX=$(GHDL_PREFIX) --ieee=synopsys -fsynopsys -fexplicit --work=$(TOP) -Pbuild $(VHDL_SRC)
 	ghdl -m --PREFIX=$(GHDL_PREFIX) --warn-no-binding --ieee=synopsys -fsynopsys -fexplicit --work=$(TOP) $(TOP)
 	ghdl synth --PREFIX=$(GHDL_PREFIX) --ieee=synopsys -fsynopsys -fexplicit --work=$(TOP) --out=verilog $(TOP) > $(TOP)_vhd.v
-	yosys -ql synth.log -p 'read_verilog -defer -sv $(TOP)_vhd.v; synth_gowin -top $(TOP) -family gw2a -json $(TOP)_v.json'
+	yosys -ql synth.log -p 'read_verilog -defer -sv plasma_top.v TMDS_rPLL.v gowin_rpll.v $(TOP)_vhd.v sdram.v; synth_gowin -top plasma_top -family gw2a -json $(TOP)_v.json'
 
 route:
 	nextpnr-himbaechel --json $(TOP)_v.json \
@@ -44,6 +44,7 @@ route:
 		--device "GW2AR-LV18QN88C8/I7" \
 		--vopt family=GW2A-18C \
 		--vopt cst=tangnano20k.cst
+	#	--vopt allow-unconstrained 
 	gowin_pack --device GW2A-18C $(TOP).json --output $(TOP)_bit.fs
 
 flash:
