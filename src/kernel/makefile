@@ -28,23 +28,27 @@ else
 
 # Customized for Linux
 # See the GNU GCC tab on the Opencores Plasma page
-CC_X86 = gcc -Wall -O -g -I../tools -m32
+CC_X86 = cc -Wall -O -g -I../tools -m32
 CP = cp
 RM = rm -rf 
 DWIN32 =
 TOOLS_DIR = ../tools/
 TOOLS2_DIR = ../tools
 APP_DIR = ../app/
+BIN_MIPS = ../gccmips_elf/
+WINEPATH = ../gccmips_elf/
+PATH := ../gccmips_elf/:$(PATH)
 LINUX_PWD = ./
-ALIASING  = -fno-strict-aliasing
-#GCC_MIPS  = $(BIN_MIPS)mips-elf-gcc $(CFLAGS)
-#AS_MIPS   = $(BIN_MIPS)mips-elf-as
-#LD_MIPS   = $(BIN_MIPS)mips-elf-ld
-#DUMP_MIPS = $(BIN_MIPS)mips-elf-objdump
-GCC_MIPS  = $(BIN_MIPS)mips-uclibc-gcc $(CFLAGS)
-AS_MIPS   = $(BIN_MIPS)mips-uclibc-as
-LD_MIPS   = $(BIN_MIPS)mips-uclibc-ld
-DUMP_MIPS = $(BIN_MIPS)mips-uclibc-objdump
+#ALIASING  = -fno-strict-aliasing
+ALIASING  = 
+GCC_MIPS  = $(BIN_MIPS)gcc.exe $(CFLAGS)
+AS_MIPS   = $(BIN_MIPS)as.exe
+LD_MIPS   = $(BIN_MIPS)ld.exe
+DUMP_MIPS = $(BIN_MIPS)objdump.exe
+#GCC_MIPS  = mips -mips1 -msingle-float -mstrict-align $(CFLAGS)
+#AS_MIPS   = clang -target mips -mips1 -msingle-float -mstrict-align  -mno-abicalls -c 
+#LD_MIPS   = ld.lld -nostdlib 
+#DUMP_MIPS = llvm-objdump
 CONVERT_BIN = $(TOOLS_DIR)convert_bin.exe
 #CONVERT_BIN = $(BIN_MIPS)mips-elf-objcopy -I elf32-big -O binary test.axf test.bin
 OBJ = o
@@ -60,19 +64,32 @@ CFLAGS_SW_MULT = -mno-mul -DUSE_SW_MULT
 CFLAGS_FEW_REGS = -ffixed-t0 -ffixed-t1 -ffixed-t2 -ffixed-t3 -ffixed-t4 -ffixed-t5 -ffixed-t6 -ffixed-t7 -ffixed-s0 -ffixed-s1 -ffixed-s2 -ffixed-s3 -ffixed-s4 -ffixed-s5 -ffixed-s6 -ffixed-s7 
 
 CFLAGS = -O2 -Wall -c -I$(TOOLS2_DIR) -msoft-float -fno-builtin
-CFLAGS += -fno-pic -mips1 -mno-abicalls
+CFLAGS += -fno-pic -mno-abicalls
 #CFLAGS += $(CFLAGS_SW_MULT)
 #CFLAGS += $(CFLAGS_FEW_REGS)
 #CFLAGS += -Wa,-alhs -g
 
+ifeq ($(LANG),)
+else
+all: cpp.exe rtos
+	echo
+
+cpp.exe:
+	ln -s ../gccmips_elf/cpp.exe .
+	ln -s ../gccmips_elf/cc1.exe .
+	ln -s ../gccmips_elf/as.exe .
+	ln -s ../gccmips_elf/ld.exe .
+	ln -s ../gccmips_elf/cygwin1.dll .
+
+endif
 # Build just the Plasma RTOS for Plasma CPU
 rtos: 
 	$(AS_MIPS) -o boot.o $(TOOLS_DIR)boot.asm
-	$(GCC_MIPS) rtos.c
-	$(GCC_MIPS) libc.c
-	$(GCC_MIPS) uart.c
-	$(GCC_MIPS) rtos_test.c
-	$(GCC_MIPS) math.c $(ALIASING)
+	$(GCC_MIPS)  rtos.c
+	$(GCC_MIPS)  libc.c
+	$(GCC_MIPS)  uart.c
+	$(GCC_MIPS)  rtos_test.c
+	$(GCC_MIPS)  math.c $(ALIASING)
 	$(LD_MIPS) -Ttext 0x10000000 -eentry -Map test.map \
 		-s -N -o test.axf \
 		boot.o rtos.o libc.o uart.o rtos_test.o math.o 
@@ -196,7 +213,7 @@ install:
 	@echo Telnet to plasma and run 'reboot test.bin [flash]'
 
 clean:
-	-$(RM) *.o *.obj *.axf *.map *.lst *.hex *.txt *.bin *.exe
+	-$(RM) *.o *.obj *.axf *.map *.lst *.hex *.txt *.bin *.exe *.dll
 
 # Run a Plasma CPU opcode simulator (can execute rtos target)
 run: 

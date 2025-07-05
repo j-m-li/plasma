@@ -48,7 +48,7 @@ endif
 CFLAGS = -O2 -Wall -c -s 
 CFLAGS += -fno-pic -mips1 -mno-abicalls
 
-all: convert_bin.exe tracehex.exe bintohex.exe ram_image.exe monitor.exe
+all: convert_bin.exe tracehex.exe bintohex.exe ram_image.exe monitor.exe mlite.exe
 	@echo make targets = count, opcodes, pi, test, run, tohex,\
 	bootldr, toimage, eterm
 	

@@ -1,6 +1,11 @@
-
-PATH:=$(PATH):../../../oss_cad-suite/bin
+ifeq ($(LANG),)
 GHDL_PREFIX=c:/lib/ghdl/
+PATH:=$(PATH):../../../oss_cad-suite/bin
+else
+GHDL_PREFIX=../../../oss-cad-suite/lib/ghdl/
+PATH:=$(PATH):../../../oss-cad-suite/bin
+endif
+
 TOP=mlite_cpu
 RM=rm -f 
 VHDL_SRC = \
@@ -57,6 +62,8 @@ clean:
 	$(RM) $(TOP)_bit.fs
 	$(RM) $(TOP)_v.json
 	$(RM) $(TOP)*.cf
+	$(RM) $(TOP)
+	$(RM) *.o
 	$(RM) synth.log
 
 
