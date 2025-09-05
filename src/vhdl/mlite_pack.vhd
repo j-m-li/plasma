@@ -258,7 +258,7 @@ package mlite_pack is
    end component;
 
    component reg_bank
-      generic(memory_type : string := "XILINX_16X");
+      generic(memory_type : string := "TRI_PORT_X");
       port(clk            : in  std_logic;
            reset_in       : in  std_logic;
            pause          : in  std_logic;
@@ -349,7 +349,7 @@ package mlite_pack is
    end component;
 
    component mlite_cpu
-      generic(memory_type     : string := "XILINX_16X"; --ALTERA_LPM, or DUAL_PORT_
+      generic(memory_type     : string := "DUAL_PORT_"; --ALTERA_LPM, or DUAL_PORT_
               mult_type       : string := "DEFAULT";
               shifter_type    : string := "DEFAULT";
               alu_type        : string := "DEFAULT";
@@ -434,7 +434,7 @@ package mlite_pack is
    end component; --eth_dma
 
    component plasma
-      generic(memory_type : string := "XILINX_X16"; --"DUAL_PORT_" "ALTERA_LPM";
+      generic(memory_type : string := "DUAL_PORT_"; --"DUAL_PORT_" "ALTERA_LPM";
               log_file    : string := "UNUSED";
               ethernet    : std_logic := '0';
               use_cache   : std_logic := '0');
