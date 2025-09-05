@@ -27,7 +27,7 @@
 //
 
 module sdram #(
-    parameter FREQ       = 48_000_000,  // 48 MHz clock (should be 166MHz...)
+    parameter FREQ       = 60_000_000,  // 60 MHz clock (should be 166MHz...)
     parameter DATA_WIDTH = 32,          // 32bit data width
     parameter BANK_WIDTH = 2,           // 4 banks
     parameter ROW_WIDTH  = 11,          // 2K rows (512K words)
